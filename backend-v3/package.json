@@ -1,0 +1,20 @@
+{
+  "name": "app-tasks-backend-v3",
+  "version": "1.0.0",
+  "description": "Backend simples com Express, JWT e persistencia em JSON",
+  "main": "src/server.js",
+  "dependencies": {
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "scripts": {
+    "start": "node --env-file=.env src/server.js",
+    "dev": "nodemon --env-file=.env src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

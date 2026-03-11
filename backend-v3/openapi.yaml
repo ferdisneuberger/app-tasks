@@ -1,0 +1,715 @@
+openapi: 3.0.3
+info:
+  title: App Tasks Backend V3 API
+  version: 1.0.0
+  description: >
+    Contrato completo da API de tarefas com autenticacao JWT, persistencia em JSON
+    e prefixo `/api`.
+
+servers:
+  - url: http://localhost:3000/api
+    description: Ambiente local
+
+tags:
+  - name: Health
+  - name: Users
+  - name: Auth
+  - name: Tasks
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      description: Identificador UUID da tarefa.
+      schema:
+        type: string
+        format: uuid
+      example: 2d6d8fa8-c85d-44cb-ae7e-6b22db65ef11
+
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          example: OK
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+          example: Titulo da tarefa e obrigatorio.
+      required:
+        - error
+
+    User:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 78d4ed6e-d08f-4bbb-a90d-81323a019e90
+        name:
+          type: string
+          example: Fernando
+        email:
+          type: string
+          format: email
+          example: fernando@example.com
+        createdAt:
+          type: string
+          format: date-time
+          example: 2026-03-10T21:30:00.000Z
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+
+    CreateUserRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Fernando
+        email:
+          type: string
+          format: email
+          example: fernando@example.com
+        password:
+          type: string
+          minLength: 6
+          example: 123456
+      required:
+        - name
+        - email
+        - password
+
+    CreateUserResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - user
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          example: fernando@example.com
+        password:
+          type: string
+          minLength: 1
+          example: 123456
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          description: JWT de autenticacao.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - token
+        - user
+
+    LogoutResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          example: Logout realizado com sucesso.
+      required:
+        - message
+
+    Task:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 2d6d8fa8-c85d-44cb-ae7e-6b22db65ef11
+        title:
+          type: string
+          example: Estudar JWT
+        description:
+          type: string
+          example: Implementar autenticacao
+        completed:
+          type: boolean
+          example: false
+        userId:
+          type: string
+          format: uuid
+          example: 78d4ed6e-d08f-4bbb-a90d-81323a019e90
+        createdAt:
+          type: string
+          format: date-time
+          example: 2026-03-10T21:35:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2026-03-10T21:35:00.000Z
+      required:
+        - id
+        - title
+        - description
+        - completed
+        - userId
+        - createdAt
+        - updatedAt
+
+    CreateTaskRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Estudar JWT
+        description:
+          type: string
+          example: Implementar autenticacao
+        completed:
+          type: boolean
+          default: false
+          example: false
+      required:
+        - title
+
+    UpdateTaskRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Estudar JWT avancado
+        description:
+          type: string
+          example: Revisar middleware de autenticacao
+        completed:
+          type: boolean
+          example: true
+      minProperties: 1
+
+    TaskResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        task:
+          $ref: '#/components/schemas/Task'
+      required:
+        - task
+
+    TaskListResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+      required:
+        - tasks
+
+    DeleteTaskResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          example: Tarefa removida com sucesso.
+      required:
+        - message
+
+    ProfileResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - user
+
+  responses:
+    BadRequest:
+      description: Requisicao invalida.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalidJson:
+              summary: JSON malformado
+              value:
+                error: JSON invalido.
+            invalidBody:
+              summary: Corpo invalido
+              value:
+                error: O corpo da requisicao deve ser um objeto JSON.
+            invalidFields:
+              summary: Campo nao permitido
+              value:
+                error: "Campos nao permitidos: extra."
+
+    Unauthorized:
+      description: Token ausente, invalido, expirado ou credenciais invalidas.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missingToken:
+              value:
+                error: Token nao informado.
+            invalidToken:
+              value:
+                error: Token invalido.
+            expiredToken:
+              value:
+                error: Token expirado.
+            revokedToken:
+              value:
+                error: Token revogado.
+            invalidCredentials:
+              value:
+                error: Credenciais invalidas.
+
+    NotFound:
+      description: Recurso nao encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            routeNotFound:
+              value:
+                error: Rota nao encontrada.
+            taskNotFound:
+              value:
+                error: Tarefa nao encontrada.
+
+    Conflict:
+      description: Conflito de dados.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            duplicateUser:
+              value:
+                error: Ja existe um usuario com este email.
+
+    InternalServerError:
+      description: Erro interno inesperado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Erro interno do servidor.
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Verifica a saude da API
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API disponivel.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /users:
+    post:
+      tags:
+        - Users
+      summary: Cria um novo usuario
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            examples:
+              default:
+                value:
+                  name: Fernando
+                  email: fernando@example.com
+                  password: 123456
+      responses:
+        '201':
+          description: Usuario criado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserResponse'
+        '400':
+          description: Erro de validacao.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingName:
+                  value:
+                    error: Nome e obrigatorio.
+                invalidEmail:
+                  value:
+                    error: Email invalido.
+                missingPassword:
+                  value:
+                    error: Senha e obrigatoria.
+                shortPassword:
+                  value:
+                    error: A senha deve ter pelo menos 6 caracteres.
+                invalidBody:
+                  value:
+                    error: O corpo da requisicao deve ser um objeto JSON.
+                invalidJson:
+                  value:
+                    error: JSON invalido.
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Retorna o perfil do usuario autenticado
+      operationId: getProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil recuperado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Realiza login e retorna token JWT
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              default:
+                value:
+                  email: fernando@example.com
+                  password: 123456
+      responses:
+        '200':
+          description: Login realizado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Erro de validacao.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingEmail:
+                  value:
+                    error: Email e obrigatorio.
+                invalidEmail:
+                  value:
+                    error: Email invalido.
+                missingPassword:
+                  value:
+                    error: Senha e obrigatoria.
+                invalidBody:
+                  value:
+                    error: O corpo da requisicao deve ser um objeto JSON.
+                invalidJson:
+                  value:
+                    error: JSON invalido.
+        '401':
+          description: Credenciais invalidas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Credenciais invalidas.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Invalida o token JWT atual
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout realizado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      summary: Lista as tarefas do usuario autenticado
+      operationId: listTasks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de tarefas retornada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Tasks
+      summary: Cria uma nova tarefa para o usuario autenticado
+      operationId: createTask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              default:
+                value:
+                  title: Estudar JWT
+                  description: Implementar autenticacao
+                  completed: false
+      responses:
+        '201':
+          description: Tarefa criada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          description: Erro de validacao.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingTitle:
+                  value:
+                    error: Titulo da tarefa e obrigatorio.
+                invalidDescription:
+                  value:
+                    error: Descricao da tarefa deve ser texto.
+                invalidCompleted:
+                  value:
+                    error: Campo completed deve ser booleano.
+                invalidBody:
+                  value:
+                    error: O corpo da requisicao deve ser um objeto JSON.
+                invalidJson:
+                  value:
+                    error: JSON invalido.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{taskId}:
+    get:
+      tags:
+        - Tasks
+      summary: Busca uma tarefa especifica do usuario autenticado
+      operationId: getTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Tarefa encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          description: Parametro invalido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingTaskId:
+                  value:
+                    error: Parametro taskId e obrigatorio.
+                invalidTaskId:
+                  value:
+                    error: Parametro taskId invalido.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Tasks
+      summary: Atualiza uma tarefa do usuario autenticado
+      operationId: updateTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+            examples:
+              titleAndDescription:
+                value:
+                  title: Estudar JWT avancado
+                  description: Revisar middleware de autenticacao
+              toggleCompleted:
+                value:
+                  completed: true
+      responses:
+        '200':
+          description: Tarefa atualizada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          description: Erro de validacao.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidTaskId:
+                  value:
+                    error: Parametro taskId invalido.
+                emptyBody:
+                  value:
+                    error: Informe ao menos um campo para atualizar.
+                missingTitle:
+                  value:
+                    error: Titulo da tarefa e obrigatorio.
+                invalidDescription:
+                  value:
+                    error: Descricao da tarefa deve ser texto.
+                invalidCompleted:
+                  value:
+                    error: Campo completed deve ser booleano.
+                invalidJson:
+                  value:
+                    error: JSON invalido.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Remove uma tarefa do usuario autenticado
+      operationId: deleteTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Tarefa removida com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteTaskResponse'
+        '400':
+          description: Parametro invalido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingTaskId:
+                  value:
+                    error: Parametro taskId e obrigatorio.
+                invalidTaskId:
+                  value:
+                    error: Parametro taskId invalido.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
