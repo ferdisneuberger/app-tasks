@@ -1,5 +1,12 @@
 const appError = require("../errors/appError");
 
+const MAX_NAME_LENGTH = 80;
+const MAX_EMAIL_LENGTH = 254;
+const MIN_PASSWORD_LENGTH = 6;
+const MAX_PASSWORD_LENGTH = 128;
+const MAX_TASK_TITLE_LENGTH = 100;
+const MAX_TASK_DESCRIPTION_LENGTH = 1000;
+
 function validateCreateUser(req) {
   assertAllowedKeys(req.body, ["name", "email", "password"]);
 
@@ -9,8 +16,16 @@ function validateCreateUser(req) {
     throw appError("Nome e obrigatorio.", 400);
   }
 
+  if (name.trim().length > MAX_NAME_LENGTH) {
+    throw appError(`Nome deve ter no maximo ${MAX_NAME_LENGTH} caracteres.`, 400);
+  }
+
   if (!email || typeof email !== "string" || !email.trim()) {
     throw appError("Email e obrigatorio.", 400);
+  }
+
+  if (email.trim().length > MAX_EMAIL_LENGTH) {
+    throw appError(`Email deve ter no maximo ${MAX_EMAIL_LENGTH} caracteres.`, 400);
   }
 
   if (!isValidEmail(email)) {
@@ -21,8 +36,12 @@ function validateCreateUser(req) {
     throw appError("Senha e obrigatoria.", 400);
   }
 
-  if (password.length < 6) {
-    throw appError("A senha deve ter pelo menos 6 caracteres.", 400);
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw appError(`A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`, 400);
+  }
+
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    throw appError(`A senha deve ter no maximo ${MAX_PASSWORD_LENGTH} caracteres.`, 400);
   }
 }
 
@@ -35,12 +54,20 @@ function validateLogin(req) {
     throw appError("Email e obrigatorio.", 400);
   }
 
+  if (email.trim().length > MAX_EMAIL_LENGTH) {
+    throw appError(`Email deve ter no maximo ${MAX_EMAIL_LENGTH} caracteres.`, 400);
+  }
+
   if (!isValidEmail(email)) {
     throw appError("Email invalido.", 400);
   }
 
   if (!password || typeof password !== "string") {
     throw appError("Senha e obrigatoria.", 400);
+  }
+
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    throw appError(`A senha deve ter no maximo ${MAX_PASSWORD_LENGTH} caracteres.`, 400);
   }
 }
 
@@ -53,8 +80,19 @@ function validateCreateTask(req) {
     throw appError("Titulo da tarefa e obrigatorio.", 400);
   }
 
+  if (title.trim().length > MAX_TASK_TITLE_LENGTH) {
+    throw appError(`Titulo da tarefa deve ter no maximo ${MAX_TASK_TITLE_LENGTH} caracteres.`, 400);
+  }
+
   if (description !== undefined && typeof description !== "string") {
     throw appError("Descricao da tarefa deve ser texto.", 400);
+  }
+
+  if (typeof description === "string" && description.trim().length > MAX_TASK_DESCRIPTION_LENGTH) {
+    throw appError(
+      `Descricao da tarefa deve ter no maximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`,
+      400
+    );
   }
 
   if (completed !== undefined && typeof completed !== "boolean") {
@@ -76,8 +114,19 @@ function validateUpdateTask(req) {
     throw appError("Titulo da tarefa e obrigatorio.", 400);
   }
 
+  if (typeof title === "string" && title.trim().length > MAX_TASK_TITLE_LENGTH) {
+    throw appError(`Titulo da tarefa deve ter no maximo ${MAX_TASK_TITLE_LENGTH} caracteres.`, 400);
+  }
+
   if (description !== undefined && typeof description !== "string") {
     throw appError("Descricao da tarefa deve ser texto.", 400);
+  }
+
+  if (typeof description === "string" && description.trim().length > MAX_TASK_DESCRIPTION_LENGTH) {
+    throw appError(
+      `Descricao da tarefa deve ter no maximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`,
+      400
+    );
   }
 
   if (completed !== undefined && typeof completed !== "boolean") {

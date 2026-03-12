@@ -174,9 +174,28 @@ button:focus-visible {
   gap: 8px;
 }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .field span {
   font-size: 0.92rem;
   color: #5f7b73;
+}
+
+.field-counter {
+  font-size: 0.78rem;
+  color: #7b948c;
+  white-space: nowrap;
+}
+
+.field-warning {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #8b6a2e;
 }
 
 .field input,
@@ -356,6 +375,7 @@ button:focus-visible {
 }
 
 .task-card {
+  position: relative;
   background: rgba(249, 252, 250, 0.9);
   border: 1px solid #d7e5df;
   border-radius: var(--radius-3);
@@ -364,7 +384,10 @@ button:focus-visible {
 
 .task-card.is-done {
   background: rgba(236, 245, 241, 0.8);
-  opacity: 0.86;
+}
+
+.task-card.has-open-menu {
+  z-index: 30;
 }
 
 .task-card[draggable="true"] {
@@ -378,10 +401,6 @@ button:focus-visible {
 .task-card-main {
   align-items: center;
   gap: 14px;
-}
-
-.task-card-main.is-clickable {
-  cursor: pointer;
 }
 
 .task-body {
@@ -412,10 +431,11 @@ button:focus-visible {
 .task-copy h3 {
   font-size: 1rem;
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   line-height: 1.35;
 }
 
@@ -530,8 +550,8 @@ button:focus-visible {
 }
 
 .toggle {
-  width: 28px;
-  height: 28px;
+  width: 25px;
+  height: 25px;
   border-radius: 999px;
   border: 1px solid #c8dad3;
   background: white;
@@ -542,8 +562,8 @@ button:focus-visible {
 }
 
 .toggle span {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 999px;
   background: transparent;
 }
@@ -706,7 +726,7 @@ button:focus-visible {
   }
 
   .task-card-main {
-    align-items: flex-start;
+    align-items: center;
     flex-direction: row;
   }
 
@@ -716,7 +736,7 @@ button:focus-visible {
   }
 
   .task-card-main .toggle {
-    margin-top: -2px;
+    margin-top: 0;
   }
 
   .task-row {
@@ -734,7 +754,6 @@ button:focus-visible {
     align-self: flex-start;
   }
 
-  .toggle,
   .icon-button,
   .task-menu-trigger,
   .chip {
