@@ -25,7 +25,13 @@ const emptyInlineEditForm = {
   title: "",
   description: "",
 };
-const MAX_TASK_TITLE_LENGTH = 80;
+const MAX_NAME_LENGTH = 80;
+const MAX_EMAIL_LENGTH = 254;
+const MAX_PASSWORD_LENGTH = 128;
+const MAX_TASK_TITLE_LENGTH = 100;
+const MAX_TASK_DESCRIPTION_LENGTH = 1000;
+const MAX_TASK_SEARCH_LENGTH = 120;
+const LENGTH_WARNING_THRESHOLD = 0.9;
 const STATUS_TOAST_DURATION_MS = 2600;
 
 function getTaskOrderKey(userId) {
@@ -63,6 +69,22 @@ function orderTasks(taskItems, pendingOrder = []) {
   });
 
   return [...pendingTasks, ...completedTasks].map(({ _originalIndex, _pendingOrderIndex, ...task }) => task);
+}
+
+function normalizeLeadingWhitespace(value) {
+  return String(value).replace(/^\s+/, "");
+}
+
+function normalizeEdgeWhitespace(value) {
+  return String(value).trim();
+}
+
+function getLimitWarning(value, maxLength) {
+  if (String(value).length < Math.ceil(maxLength * LENGTH_WARNING_THRESHOLD)) {
+    return "";
+  }
+
+  return `Voce esta perto do limite de ${maxLength} caracteres.`;
 }
 
 function EditIcon() {
@@ -353,7 +375,15 @@ function App() {
     const { name, value } = event.target;
     setAuthForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: normalizeLeadingWhitespace(value),
+    }));
+  }
+
+  function handleAuthFieldBlur(event) {
+    const { name, value } = event.target;
+    setAuthForm((current) => ({
+      ...current,
+      [name]: normalizeEdgeWhitespace(value),
     }));
   }
 
@@ -361,8 +391,24 @@ function App() {
     const { name, value } = event.target;
     setTaskForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: normalizeLeadingWhitespace(value),
     }));
+  }
+
+  function handleTaskFieldBlur(event) {
+    const { name, value } = event.target;
+    setTaskForm((current) => ({
+      ...current,
+      [name]: normalizeEdgeWhitespace(value),
+    }));
+  }
+
+  function handleSearchQueryChange(event) {
+    setSearchQuery(normalizeLeadingWhitespace(event.target.value).slice(0, MAX_TASK_SEARCH_LENGTH));
+  }
+
+  function handleSearchQueryBlur(event) {
+    setSearchQuery(normalizeEdgeWhitespace(event.target.value));
   }
 
   async function handleRegister(event) {
@@ -493,7 +539,15 @@ function App() {
     const { name, value } = event.target;
     setInlineEditForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: normalizeLeadingWhitespace(value),
+    }));
+  }
+
+  function handleInlineEditFieldBlur(event) {
+    const { name, value } = event.target;
+    setInlineEditForm((current) => ({
+      ...current,
+      [name]: normalizeEdgeWhitespace(value),
     }));
   }
 
@@ -641,18 +695,6 @@ function App() {
     setOpenTaskMenuId((current) => (current === taskId ? "" : taskId));
   }
 
-  function handleTaskCardClick(event, task) {
-    if (editingTaskId === task.id || draggedTaskId) {
-      return;
-    }
-
-    if (event.target.closest("button, input, textarea, form, a")) {
-      return;
-    }
-
-    handleToggleTask(task);
-  }
-
   if (!user) {
     return (
       <main className="page">
@@ -695,8 +737,10 @@ function App() {
                 <label className="field">
                   <span>Nome</span>
                   <input
+                    maxLength={MAX_NAME_LENGTH}
                     name="name"
                     value={authForm.name}
+                    onBlur={handleAuthFieldBlur}
                     onChange={handleAuthFieldChange}
                     placeholder="Seu nome"
                   />
@@ -706,9 +750,11 @@ function App() {
               <label className="field">
                 <span>Email</span>
                 <input
+                  maxLength={MAX_EMAIL_LENGTH}
                   name="email"
                   type="email"
                   value={authForm.email}
+                  onBlur={handleAuthFieldBlur}
                   onChange={handleAuthFieldChange}
                   placeholder="voce@exemplo.com"
                 />
@@ -717,9 +763,11 @@ function App() {
               <label className="field">
                 <span>Senha</span>
                 <input
+                  maxLength={MAX_PASSWORD_LENGTH}
                   name="password"
                   type="password"
                   value={authForm.password}
+                  onBlur={handleAuthFieldBlur}
                   onChange={handleAuthFieldChange}
                   placeholder="Minimo de 6 caracteres"
                 />
@@ -759,26 +807,47 @@ function App() {
 
             <form onSubmit={handleTaskSubmit} className="form">
               <label className="field">
-                <span>Titulo</span>
+                <div className="field-label-row">
+                  <span>Titulo</span>
+                  <span className="field-counter">
+                    {taskForm.title.length}/{MAX_TASK_TITLE_LENGTH}
+                  </span>
+                </div>
                 <input
                   ref={createTitleInputRef}
                   maxLength={MAX_TASK_TITLE_LENGTH}
                   name="title"
                   value={taskForm.title}
+                  onBlur={handleTaskFieldBlur}
                   onChange={handleTaskFieldChange}
                   placeholder="Ex.: revisar..."
                 />
+                {getLimitWarning(taskForm.title, MAX_TASK_TITLE_LENGTH) ? (
+                  <p className="field-warning">{getLimitWarning(taskForm.title, MAX_TASK_TITLE_LENGTH)}</p>
+                ) : null}
               </label>
 
               <label className="field">
-                <span>Descricao</span>
+                <div className="field-label-row">
+                  <span>Descricao</span>
+                  <span className="field-counter">
+                    {taskForm.description.length}/{MAX_TASK_DESCRIPTION_LENGTH}
+                  </span>
+                </div>
                 <textarea
+                  maxLength={MAX_TASK_DESCRIPTION_LENGTH}
                   name="description"
                   value={taskForm.description}
+                  onBlur={handleTaskFieldBlur}
                   onChange={handleTaskFieldChange}
                   rows="5"
                   placeholder="Detalhes opcionais"
                 />
+                {getLimitWarning(taskForm.description, MAX_TASK_DESCRIPTION_LENGTH) ? (
+                  <p className="field-warning">
+                    {getLimitWarning(taskForm.description, MAX_TASK_DESCRIPTION_LENGTH)}
+                  </p>
+                ) : null}
               </label>
 
               <button className="primary-button" disabled={taskLoading} type="submit">
@@ -822,10 +891,17 @@ function App() {
               <input
                 aria-label="Buscar tarefas"
                 className="task-search"
-                onChange={(event) => setSearchQuery(event.target.value)}
+                maxLength={MAX_TASK_SEARCH_LENGTH}
+                onBlur={handleSearchQueryBlur}
+                onChange={handleSearchQueryChange}
                 placeholder="Buscar tarefas..."
                 value={searchQuery}
               />
+              {getLimitWarning(searchQuery, MAX_TASK_SEARCH_LENGTH) ? (
+                <p className="field-warning task-search-warning">
+                  {getLimitWarning(searchQuery, MAX_TASK_SEARCH_LENGTH)}
+                </p>
+              ) : null}
             </div>
             {loading && tasks.length === 0 ? (
               <div className="task-skeleton-list" aria-hidden="true">
@@ -850,9 +926,17 @@ function App() {
                   ) : null}
                 </div>
                 ) : (
-                  visibleTasks.map((task) => (
+                visibleTasks.map((task) => (
                   <article
-                    className={task.completed ? "task-card is-done" : "task-card"}
+                    className={
+                      task.completed
+                        ? openTaskMenuId === task.id
+                          ? "task-card is-done has-open-menu"
+                          : "task-card is-done"
+                        : openTaskMenuId === task.id
+                          ? "task-card has-open-menu"
+                          : "task-card"
+                    }
                     draggable={
                       !task.completed &&
                       editingTaskId !== task.id &&
@@ -879,10 +963,7 @@ function App() {
                       setDraggedTaskId("");
                     }}
                   >
-                    <div
-                      className={editingTaskId === task.id ? "task-card-main" : "task-card-main is-clickable"}
-                      onClick={(event) => handleTaskCardClick(event, task)}
-                    >
+                    <div className="task-card-main">
                       <button
                         aria-label={task.completed ? "Marcar como pendente" : "Marcar como concluida"}
                         aria-pressed={task.completed}
@@ -901,18 +982,18 @@ function App() {
                                 className="task-inline-title"
                                 maxLength={MAX_TASK_TITLE_LENGTH}
                                 name="title"
+                                onBlur={handleInlineEditFieldBlur}
                                 onKeyDown={(event) => handleInlineEditKeyDown(event, task.id)}
                                 onChange={handleInlineEditFieldChange}
                                 placeholder="Titulo"
                                 value={inlineEditForm.title}
                               />
-                              <span className={task.completed ? "soft-badge is-done" : "soft-badge is-pending"}>
-                                {task.completed ? "Concluida" : "Pendente"}
-                              </span>
                             </div>
                             <textarea
                               className="task-inline-description"
+                              maxLength={MAX_TASK_DESCRIPTION_LENGTH}
                               name="description"
+                              onBlur={handleInlineEditFieldBlur}
                               onKeyDown={(event) => handleInlineEditKeyDown(event, task.id)}
                               onChange={handleInlineEditFieldChange}
                               placeholder="Descricao"
@@ -922,6 +1003,17 @@ function App() {
                             {inlineEditForm.title !== task.title ||
                             inlineEditForm.description !== (task.description || "") ? (
                               <p className="task-inline-hint">Alteracoes nao salvas</p>
+                            ) : null}
+                            <p className="task-inline-hint">
+                              {inlineEditForm.title.length}/{MAX_TASK_TITLE_LENGTH} no titulo •{" "}
+                              {inlineEditForm.description.length}/{MAX_TASK_DESCRIPTION_LENGTH} na descricao
+                            </p>
+                            {getLimitWarning(inlineEditForm.title, MAX_TASK_TITLE_LENGTH) ||
+                            getLimitWarning(inlineEditForm.description, MAX_TASK_DESCRIPTION_LENGTH) ? (
+                              <p className="field-warning task-inline-warning">
+                                {getLimitWarning(inlineEditForm.title, MAX_TASK_TITLE_LENGTH) ||
+                                  getLimitWarning(inlineEditForm.description, MAX_TASK_DESCRIPTION_LENGTH)}
+                              </p>
                             ) : null}
                             <div className="task-inline-actions">
                               <button className="text-button" onClick={cancelEditTask} type="button">
@@ -940,9 +1032,6 @@ function App() {
                               </div>
 
                               <div className="task-row-right">
-                                <span className={task.completed ? "soft-badge is-done" : "soft-badge is-pending"}>
-                                  {task.completed ? "Concluida" : "Pendente"}
-                                </span>
                                 <div className="task-menu">
                                   <button
                                     aria-label="Mais acoes"
@@ -1041,25 +1130,46 @@ function App() {
             </div>
             <form className="form" onSubmit={handleTaskSubmit}>
               <label className="field">
-                <span>Titulo</span>
+                <div className="field-label-row">
+                  <span>Titulo</span>
+                  <span className="field-counter">
+                    {taskForm.title.length}/{MAX_TASK_TITLE_LENGTH}
+                  </span>
+                </div>
                 <input
                   ref={mobileSheetTitleInputRef}
                   maxLength={MAX_TASK_TITLE_LENGTH}
                   name="title"
+                  onBlur={handleTaskFieldBlur}
                   onChange={handleTaskFieldChange}
                   placeholder="Ex.: revisar API"
                   value={taskForm.title}
                 />
+                {getLimitWarning(taskForm.title, MAX_TASK_TITLE_LENGTH) ? (
+                  <p className="field-warning">{getLimitWarning(taskForm.title, MAX_TASK_TITLE_LENGTH)}</p>
+                ) : null}
               </label>
               <label className="field">
-                <span>Descricao</span>
+                <div className="field-label-row">
+                  <span>Descricao</span>
+                  <span className="field-counter">
+                    {taskForm.description.length}/{MAX_TASK_DESCRIPTION_LENGTH}
+                  </span>
+                </div>
                 <textarea
+                  maxLength={MAX_TASK_DESCRIPTION_LENGTH}
                   name="description"
+                  onBlur={handleTaskFieldBlur}
                   onChange={handleTaskFieldChange}
                   placeholder="Detalhes opcionais"
                   rows="4"
                   value={taskForm.description}
                 />
+                {getLimitWarning(taskForm.description, MAX_TASK_DESCRIPTION_LENGTH) ? (
+                  <p className="field-warning">
+                    {getLimitWarning(taskForm.description, MAX_TASK_DESCRIPTION_LENGTH)}
+                  </p>
+                ) : null}
               </label>
               <button className="primary-button" disabled={taskLoading} type="submit">
                 {taskLoading ? "Salvando..." : "Criar tarefa"}
