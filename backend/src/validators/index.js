@@ -6,6 +6,8 @@ const MIN_PASSWORD_LENGTH = 6;
 const MAX_PASSWORD_LENGTH = 128;
 const MAX_TASK_TITLE_LENGTH = 100;
 const MAX_TASK_DESCRIPTION_LENGTH = 1000;
+const MIN_THEME_PERCENT = 40;
+const MAX_THEME_PERCENT = 140;
 
 function validateCreateUser(req) {
   assertAllowedKeys(req.body, ["name", "email", "password"]);
@@ -146,6 +148,59 @@ function validateTaskIdParam(req) {
   }
 }
 
+function validateUpdateUserPreferences(req) {
+  assertAllowedKeys(req.body, ["theme"]);
+
+  const { theme } = req.body;
+
+  if (!theme || typeof theme !== "object" || Array.isArray(theme)) {
+    throw appError("Campo theme e obrigatorio.", 400);
+  }
+
+  assertAllowedKeys(theme, ["baseColor", "saturation", "intensity"]);
+
+  const hasAnyThemeField =
+    Object.prototype.hasOwnProperty.call(theme, "baseColor") ||
+    Object.prototype.hasOwnProperty.call(theme, "saturation") ||
+    Object.prototype.hasOwnProperty.call(theme, "intensity");
+
+  if (!hasAnyThemeField) {
+    throw appError("Informe ao menos um campo de theme para atualizar.", 400);
+  }
+
+  if (theme.baseColor !== undefined) {
+    if (typeof theme.baseColor !== "string" || !/^#[0-9a-fA-F]{6}$/.test(theme.baseColor.trim())) {
+      throw appError("theme.baseColor deve ser uma cor hexadecimal no formato #RRGGBB.", 400);
+    }
+  }
+
+  if (theme.saturation !== undefined) {
+    if (!Number.isInteger(theme.saturation)) {
+      throw appError("theme.saturation deve ser inteiro.", 400);
+    }
+
+    if (theme.saturation < MIN_THEME_PERCENT || theme.saturation > MAX_THEME_PERCENT) {
+      throw appError(
+        `theme.saturation deve estar entre ${MIN_THEME_PERCENT} e ${MAX_THEME_PERCENT}.`,
+        400
+      );
+    }
+  }
+
+  if (theme.intensity !== undefined) {
+    if (!Number.isInteger(theme.intensity)) {
+      throw appError("theme.intensity deve ser inteiro.", 400);
+    }
+
+    if (theme.intensity < MIN_THEME_PERCENT || theme.intensity > MAX_THEME_PERCENT) {
+      throw appError(
+        `theme.intensity deve estar entre ${MIN_THEME_PERCENT} e ${MAX_THEME_PERCENT}.`,
+        400
+      );
+    }
+  }
+}
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
 }
@@ -168,4 +223,5 @@ module.exports = {
   validateCreateTask,
   validateUpdateTask,
   validateTaskIdParam,
+  validateUpdateUserPreferences,
 };
