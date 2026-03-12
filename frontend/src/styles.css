@@ -298,6 +298,12 @@ button:focus-visible {
   display: grid;
   grid-template-columns: 360px 1fr;
   gap: 24px;
+  align-items: start;
+}
+
+.task-editor {
+  height: fit-content;
+  align-self: start;
 }
 
 .task-list {

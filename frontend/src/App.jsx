@@ -742,10 +742,7 @@ function App() {
           <div className="topbar-spacer" />
           <div className="topbar-center">
             <span className="eyebrow">Painel</span>
-            <h1>Ola, {user.name}</h1>
-            <div className="soft-badge">
-              {pendingCount} pendente(s)
-            </div>
+            <h1>Olá, {user.name}</h1>
           </div>
           <button className="ghost-button topbar-logout" onClick={handleLogout} type="button">
             Sair
@@ -769,7 +766,7 @@ function App() {
                   name="title"
                   value={taskForm.title}
                   onChange={handleTaskFieldChange}
-                  placeholder="Ex.: revisar API"
+                  placeholder="Ex.: revisar..."
                 />
               </label>
 
