@@ -12,6 +12,7 @@ const {
   validateCreateTask,
   validateUpdateTask,
   validateTaskIdParam,
+  validateUpdateUserPreferences,
 } = require("../validators");
 
 const router = express.Router();
@@ -20,6 +21,14 @@ router.get("/health", healthController.healthCheck);
 
 router.post("/users", validate(ensureBodyObject), validate(validateCreateUser), userController.createUser);
 router.get("/users/me", authMiddleware, userController.getProfile);
+router.get("/users/preferences", authMiddleware, userController.getPreferences);
+router.put(
+  "/users/preferences",
+  authMiddleware,
+  validate(ensureBodyObject),
+  validate(validateUpdateUserPreferences),
+  userController.updatePreferences
+);
 
 router.post("/auth/login", validate(ensureBodyObject), validate(validateLogin), authController.login);
 router.post("/auth/logout", authMiddleware, authController.logout);

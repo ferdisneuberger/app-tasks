@@ -10,10 +10,30 @@
   --radius-3: 20px;
   --shadow-1: 0 8px 18px rgba(120, 149, 140, 0.16);
   --shadow-2: 0 14px 26px rgba(97, 137, 124, 0.22);
-  color: #27403a;
+  --color-primary: #7aab9a;
+  --color-primary-strong: #5e8779;
+  --color-primary-soft: #dff0e9;
+  --color-bg-start: #f6fbf8;
+  --color-bg-end: #edf5f1;
+  --color-surface-border: rgba(151, 181, 171, 0.35);
+  --color-surface-bg: rgba(255, 255, 255, 0.72);
+  --color-card-bg: color-mix(in srgb, var(--color-bg-start) 68%, white);
+  --color-card-done-bg: color-mix(in srgb, var(--color-done-bg) 78%, white);
+  --color-text-main: #27403a;
+  --color-text-muted: #5f7b73;
+  --color-badge-bg: #edf5f1;
+  --color-badge-text: #2f4e45;
+  --color-pending-bg: #dff0e9;
+  --color-pending-border: #b7d8c9;
+  --color-done-bg: #edf3f1;
+  --color-done-border: #d5e2dd;
+  --color-control-border: color-mix(in srgb, var(--color-primary) 22%, #c7d8d1);
+  --color-control-bg: color-mix(in srgb, var(--color-bg-start) 60%, white);
+  --color-control-hover: color-mix(in srgb, var(--color-primary-soft) 58%, white);
+  color: var(--color-text-main);
   background:
-    radial-gradient(circle at top left, rgba(214, 234, 228, 0.9), transparent 35%),
-    linear-gradient(180deg, #f6fbf8 0%, #edf5f1 100%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary-soft) 70%, transparent), transparent 35%),
+    linear-gradient(180deg, var(--color-bg-start) 0%, var(--color-bg-end) 100%);
   background-repeat: no-repeat;
   background-size: 100% 100%;
   line-height: 1.5;
@@ -99,7 +119,7 @@ button:focus-visible {
 .topbar p,
 .empty-state p,
 .task-copy p {
-  color: #5f7b73;
+  color: var(--color-text-muted);
 }
 
 .auth-copy p {
@@ -111,15 +131,15 @@ button:focus-visible {
 .eyebrow {
   display: inline-flex;
   margin-bottom: 12px;
-  color: #6f9086;
+  color: color-mix(in srgb, var(--color-text-muted) 88%, white);
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.74rem;
 }
 
 .panel {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(151, 181, 171, 0.35);
+  background: var(--color-surface-bg);
+  border: 1px solid var(--color-surface-border);
   box-shadow: 0 18px 48px rgba(113, 145, 135, 0.12);
   backdrop-filter: blur(18px);
   border-radius: 28px;
@@ -150,7 +170,7 @@ button:focus-visible {
 .text-button {
   border: 0;
   background: transparent;
-  color: #5c7a72;
+  color: var(--color-text-muted);
 }
 
 .tab {
@@ -160,7 +180,7 @@ button:focus-visible {
 
 .tab.is-active {
   background: #ffffff;
-  color: #28413a;
+  color: var(--color-text-main);
   box-shadow: var(--shadow-1);
 }
 
@@ -183,7 +203,7 @@ button:focus-visible {
 
 .field span {
   font-size: 0.92rem;
-  color: #5f7b73;
+  color: var(--color-text-muted);
 }
 
 .field-counter {
@@ -212,8 +232,8 @@ button:focus-visible {
 
 .field input:focus,
 .field textarea:focus {
-  border-color: #9ec4b7;
-  box-shadow: 0 0 0 4px rgba(158, 196, 183, 0.18);
+  border-color: color-mix(in srgb, var(--color-primary) 68%, white);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .primary-button,
@@ -225,7 +245,7 @@ button:focus-visible {
 .primary-button {
   border: 0;
   color: #f7fcfa;
-  background: linear-gradient(135deg, #7aab9a 0%, #5e8779 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-strong) 100%);
   box-shadow: var(--shadow-2);
 }
 
@@ -235,8 +255,12 @@ button:focus-visible {
 }
 
 .ghost-button {
-  border: 1px solid #d4e4de;
-  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid var(--color-control-border);
+  background: var(--color-control-bg);
+}
+
+.ghost-button:hover {
+  background: var(--color-control-hover);
 }
 
 .feedback {
@@ -297,9 +321,20 @@ button:focus-visible {
   font-size: 1.35rem;
 }
 
-.topbar-logout {
+.topbar-right {
   grid-column: 3;
   justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-icon-button {
+  width: 36px;
+  height: 36px;
+}
+
+.topbar-logout {
   padding: 8px 14px;
 }
 
@@ -313,11 +348,69 @@ button:focus-visible {
   margin-bottom: 18px;
 }
 
+.section-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: 360px 1fr;
   gap: 24px;
   align-items: start;
+}
+
+.theme-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.theme-panel-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.theme-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.theme-controls .field {
+  gap: 6px;
+}
+
+.theme-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.theme-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(18, 28, 25, 0.5);
+}
+
+.theme-modal-panel {
+  position: relative;
+  width: min(720px, 100%);
+  padding: 16px;
+}
+
+.theme-modal-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .task-editor {
@@ -343,9 +436,9 @@ button:focus-visible {
 }
 
 .chip {
-  border: 1px solid #d4e4de;
-  background: rgba(255, 255, 255, 0.7);
-  color: #47635a;
+  border: 1px solid var(--color-control-border);
+  background: var(--color-control-bg);
+  color: var(--color-text-muted);
   border-radius: 999px;
   padding: 7px 12px;
   font-size: 0.84rem;
@@ -353,16 +446,16 @@ button:focus-visible {
 
 .chip.is-active {
   background: #ffffff;
-  color: #2a463e;
-  border-color: #9ec4b7;
+  color: var(--color-text-main);
+  border-color: color-mix(in srgb, var(--color-primary) 48%, white);
   box-shadow: 0 8px 16px rgba(120, 149, 140, 0.15);
 }
 
 .task-search {
   width: 100%;
-  border: 1px solid #d8e6e0;
-  background: rgba(255, 255, 255, 0.9);
-  color: #27403a;
+  border: 1px solid var(--color-control-border);
+  background: color-mix(in srgb, var(--color-bg-start) 46%, white);
+  color: var(--color-text-main);
   border-radius: 14px;
   padding: 10px 12px;
   outline: none;
@@ -370,20 +463,20 @@ button:focus-visible {
 }
 
 .task-search:focus {
-  border-color: #9ec4b7;
-  box-shadow: 0 0 0 4px rgba(158, 196, 183, 0.18);
+  border-color: color-mix(in srgb, var(--color-primary) 62%, white);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 24%, transparent);
 }
 
 .task-card {
   position: relative;
-  background: rgba(249, 252, 250, 0.9);
-  border: 1px solid #d7e5df;
+  background: var(--color-card-bg);
+  border: 1px solid color-mix(in srgb, var(--color-surface-border) 88%, white);
   border-radius: var(--radius-3);
   padding: 14px 16px;
 }
 
 .task-card.is-done {
-  background: rgba(236, 245, 241, 0.8);
+  background: var(--color-card-done-bg);
 }
 
 .task-card.has-open-menu {
@@ -553,7 +646,7 @@ button:focus-visible {
   width: 25px;
   height: 25px;
   border-radius: 999px;
-  border: 1px solid #c8dad3;
+  border: 1px solid var(--color-control-border);
   background: white;
   display: inline-flex;
   align-items: center;
@@ -569,7 +662,7 @@ button:focus-visible {
 }
 
 .toggle.is-done span {
-  background: #6e9d8d;
+  background: var(--color-primary);
 }
 
 .soft-badge {
@@ -579,23 +672,23 @@ button:focus-visible {
   min-height: 28px;
   padding: 5px 10px;
   border-radius: 999px;
-  color: #2f4e45;
-  background: #e9f1ee;
-  border: 1px solid #cbddd6;
+  color: var(--color-badge-text);
+  background: var(--color-badge-bg);
+  border: 1px solid color-mix(in srgb, var(--color-badge-bg) 72%, #9fbdb2);
   white-space: nowrap;
   font-size: 0.78rem;
 }
 
 .soft-badge.is-pending {
-  color: #224d3f;
-  background: #dff0e9;
-  border-color: #b7d8c9;
+  color: color-mix(in srgb, var(--color-text-main) 92%, #143429);
+  background: var(--color-pending-bg);
+  border-color: var(--color-pending-border);
 }
 
 .soft-badge.is-done {
-  color: #4f6b62;
-  background: #edf3f1;
-  border-color: #d5e2dd;
+  color: color-mix(in srgb, var(--color-text-muted) 88%, #6b8079);
+  background: var(--color-done-bg);
+  border-color: var(--color-done-border);
 }
 
 .text-button {
@@ -613,7 +706,7 @@ button:focus-visible {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #5c7a72;
+  color: var(--color-text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -621,7 +714,7 @@ button:focus-visible {
 }
 
 .icon-button:hover {
-  background: rgba(92, 122, 114, 0.12);
+  background: var(--color-control-hover);
 }
 
 .icon-button:focus-visible {
@@ -694,6 +787,24 @@ button:focus-visible {
 
 .task-menu-item.danger:hover {
   background: #f7e7eb;
+}
+
+.list-menu {
+  position: relative;
+}
+
+.list-menu-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid #d7e5df;
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(79, 101, 93, 0.18);
+  padding: 6px;
+  z-index: 22;
 }
 
 .task-skeleton-list {
@@ -852,8 +963,34 @@ button:focus-visible {
     font-size: 1.18rem;
   }
 
+  .topbar-right {
+    gap: 6px;
+  }
+
+  .topbar-right .ghost-button {
+    padding: 6px 10px;
+  }
+
   .topbar-logout {
     padding: 6px 12px;
+  }
+
+  .theme-controls {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .theme-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .theme-modal-panel {
+    width: 100%;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    max-height: 84vh;
+    overflow-y: auto;
   }
 
   .mobile-fab {
@@ -864,7 +1001,7 @@ button:focus-visible {
     height: 56px;
     border-radius: 999px;
     border: 0;
-    background: linear-gradient(135deg, #7aab9a 0%, #5e8779 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-strong) 100%);
     color: #f7fcfa;
     font-size: 2rem;
     line-height: 1;

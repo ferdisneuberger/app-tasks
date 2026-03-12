@@ -4,9 +4,11 @@ import {
   createUser,
   deleteTask,
   getProfile,
+  getUserPreferences,
   listTasks,
   login,
   logout,
+  updateUserPreferences,
   updateTask,
 } from "./api";
 
@@ -33,6 +35,13 @@ const MAX_TASK_DESCRIPTION_LENGTH = 1000;
 const MAX_TASK_SEARCH_LENGTH = 120;
 const LENGTH_WARNING_THRESHOLD = 0.9;
 const STATUS_TOAST_DURATION_MS = 2600;
+const THEME_SYNC_DEBOUNCE_MS = 300;
+const THEME_STORAGE_KEY = "app-tasks-theme-cache-v1";
+const DEFAULT_THEME = Object.freeze({
+  baseColor: "#7aab9a",
+  saturation: 100,
+  intensity: 100,
+});
 
 function getTaskOrderKey(userId) {
   return `app-tasks-order:${userId}`;
@@ -87,6 +96,91 @@ function getLimitWarning(value, maxLength) {
   return `Voce esta perto do limite de ${maxLength} caracteres.`;
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function isValidHexColor(value) {
+  return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value.trim());
+}
+
+function normalizeTheme(input = {}) {
+  return {
+    baseColor: isValidHexColor(input.baseColor) ? input.baseColor.toLowerCase() : DEFAULT_THEME.baseColor,
+    saturation: clamp(Number(input.saturation) || DEFAULT_THEME.saturation, 40, 140),
+    intensity: clamp(Number(input.intensity) || DEFAULT_THEME.intensity, 40, 140),
+  };
+}
+
+function hexToHsl(hex) {
+  const sanitized = hex.replace("#", "");
+  const r = parseInt(sanitized.slice(0, 2), 16) / 255;
+  const g = parseInt(sanitized.slice(2, 4), 16) / 255;
+  const b = parseInt(sanitized.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const diff = max - min;
+
+  let h = 0;
+  if (diff !== 0) {
+    if (max === r) {
+      h = ((g - b) / diff) % 6;
+    } else if (max === g) {
+      h = (b - r) / diff + 2;
+    } else {
+      h = (r - g) / diff + 4;
+    }
+    h = Math.round(h * 60);
+    if (h < 0) {
+      h += 360;
+    }
+  }
+
+  const l = (max + min) / 2;
+  const s = diff === 0 ? 0 : diff / (1 - Math.abs(2 * l - 1));
+
+  return {
+    h,
+    s: s * 100,
+    l: l * 100,
+  };
+}
+
+function toHsl(h, s, l) {
+  return `hsl(${Math.round(h)} ${Math.round(s)}% ${Math.round(l)}%)`;
+}
+
+function applyThemeToDocument(themeInput) {
+  const theme = normalizeTheme(themeInput);
+  const baseHsl = hexToHsl(theme.baseColor);
+  const saturationMultiplier = theme.saturation / 100;
+  const intensityMultiplier = theme.intensity / 100;
+  const h = baseHsl.h;
+  const s = clamp(baseHsl.s * saturationMultiplier, 22, 88);
+  const textS = clamp(s * 0.55, 12, 40);
+  const main = clamp(42 * intensityMultiplier, 30, 56);
+  const strong = clamp(main - 10, 20, 44);
+  const soft = clamp(main + 24, 52, 78);
+  const bgTop = clamp(96 - intensityMultiplier * 2, 88, 98);
+  const bgBottom = clamp(93 - intensityMultiplier * 4, 80, 96);
+
+  const root = document.documentElement;
+  root.style.setProperty("--color-primary", toHsl(h, s, main));
+  root.style.setProperty("--color-primary-strong", toHsl(h, s, strong));
+  root.style.setProperty("--color-primary-soft", toHsl(h, s, soft));
+  root.style.setProperty("--color-bg-start", toHsl(h, clamp(s * 0.36, 12, 42), bgTop));
+  root.style.setProperty("--color-bg-end", toHsl(h, clamp(s * 0.32, 10, 34), bgBottom));
+  root.style.setProperty("--color-surface-border", toHsl(h, clamp(s * 0.3, 10, 30), 72));
+  root.style.setProperty("--color-text-main", toHsl(h, textS, 20));
+  root.style.setProperty("--color-text-muted", toHsl(h, clamp(textS * 0.8, 10, 24), 42));
+  root.style.setProperty("--color-badge-bg", toHsl(h, clamp(s * 0.25, 10, 30), 90));
+  root.style.setProperty("--color-badge-text", toHsl(h, clamp(textS, 10, 26), 28));
+  root.style.setProperty("--color-pending-bg", toHsl(h, clamp(s * 0.45, 18, 42), 88));
+  root.style.setProperty("--color-pending-border", toHsl(h, clamp(s * 0.42, 16, 38), 74));
+  root.style.setProperty("--color-done-bg", toHsl(h, clamp(s * 0.18, 8, 24), 93));
+  root.style.setProperty("--color-done-border", toHsl(h, clamp(s * 0.2, 8, 24), 84));
+}
+
 function EditIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -111,6 +205,14 @@ function MoreIcon() {
   );
 }
 
+function PaletteIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M12 3a9 9 0 1 0 0 18h1.2a2.8 2.8 0 0 0 0-5.6H12a1.6 1.6 0 0 1 0-3.2h2.7A5.3 5.3 0 0 0 20 6.9 3.9 3.9 0 0 0 16.1 3H12zm-5 8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.3 1.3 0 1 1 0-2.6A1.3 1.3 0 0 1 10 7zm5.5.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4z" />
+    </svg>
+  );
+}
+
 function App() {
   const [mode, setMode] = useState("login");
   const [token, setToken] = useState(() => localStorage.getItem("app-tasks-token") || "");
@@ -130,16 +232,38 @@ function App() {
   const [collapsibleTaskIds, setCollapsibleTaskIds] = useState([]);
   const [isTaskSheetOpen, setTaskSheetOpen] = useState(false);
   const [openTaskMenuId, setOpenTaskMenuId] = useState("");
+  const [isListMenuOpen, setListMenuOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [undoDeleteInfo, setUndoDeleteInfo] = useState(null);
   const [statusToast, setStatusToast] = useState(null);
+  const [themeConfig, setThemeConfig] = useState(DEFAULT_THEME);
+  const [isThemePanelOpen, setThemePanelOpen] = useState(false);
   const descriptionMeasureRefs = useRef(new Map());
   const createTitleInputRef = useRef(null);
   const mobileSheetTitleInputRef = useRef(null);
   const pendingDeleteRef = useRef(null);
   const deleteTimeoutRef = useRef(null);
   const statusToastTimeoutRef = useRef(null);
+  const themeSyncTimeoutRef = useRef(null);
+  const themeSyncEnabledRef = useRef(false);
+
+  useEffect(() => {
+    const cachedThemeRaw = localStorage.getItem(THEME_STORAGE_KEY);
+    if (cachedThemeRaw) {
+      try {
+        const cachedTheme = normalizeTheme(JSON.parse(cachedThemeRaw));
+        setThemeConfig(cachedTheme);
+        applyThemeToDocument(cachedTheme);
+      } catch {
+        setThemeConfig(DEFAULT_THEME);
+        applyThemeToDocument(DEFAULT_THEME);
+      }
+      return;
+    }
+
+    applyThemeToDocument(DEFAULT_THEME);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -151,9 +275,10 @@ function App() {
     async function loadSession() {
       try {
         setLoading(true);
-        const [{ user: profileUser }, { tasks: taskItems }] = await Promise.all([
+        const [{ user: profileUser }, { tasks: taskItems }, preferencesResult] = await Promise.all([
           getProfile(token),
           listTasks(token),
+          getUserPreferences(token).catch(() => null),
         ]);
 
         if (cancelled) {
@@ -164,6 +289,18 @@ function App() {
         const savedOrder = localStorage.getItem(getTaskOrderKey(profileUser.id));
         const pendingOrder = savedOrder ? JSON.parse(savedOrder) : [];
         setTasks(orderTasks(taskItems, pendingOrder));
+        if (preferencesResult?.preferences?.theme) {
+          const normalizedTheme = normalizeTheme(preferencesResult.preferences.theme);
+          setThemeConfig(normalizedTheme);
+          applyThemeToDocument(normalizedTheme);
+          localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(normalizedTheme));
+        } else if (profileUser?.preferences?.theme) {
+          const normalizedTheme = normalizeTheme(profileUser.preferences.theme);
+          setThemeConfig(normalizedTheme);
+          applyThemeToDocument(normalizedTheme);
+          localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(normalizedTheme));
+        }
+        themeSyncEnabledRef.current = true;
         localStorage.setItem("app-tasks-token", token);
         localStorage.setItem("app-tasks-user", JSON.stringify(profileUser));
       } catch (requestError) {
@@ -237,12 +374,64 @@ function App() {
   }, [openTaskMenuId]);
 
   useEffect(() => {
+    if (!isListMenuOpen) {
+      return;
+    }
+
+    function handleOutsideClick(event) {
+      if (!event.target.closest(".list-menu")) {
+        setListMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handleOutsideClick);
+    return () => {
+      window.removeEventListener("pointerdown", handleOutsideClick);
+    };
+  }, [isListMenuOpen]);
+
+  useEffect(() => {
+    if (!token || !user) {
+      return;
+    }
+
+    if (!themeSyncEnabledRef.current) {
+      return;
+    }
+
+    if (themeSyncTimeoutRef.current) {
+      window.clearTimeout(themeSyncTimeoutRef.current);
+    }
+
+    themeSyncTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        await updateUserPreferences(token, {
+          theme: themeConfig,
+        });
+      } catch (requestError) {
+        showStatusToast(requestError.message, "error");
+      } finally {
+        themeSyncTimeoutRef.current = null;
+      }
+    }, THEME_SYNC_DEBOUNCE_MS);
+
+    return () => {
+      if (themeSyncTimeoutRef.current) {
+        window.clearTimeout(themeSyncTimeoutRef.current);
+      }
+    };
+  }, [themeConfig, token, user]);
+
+  useEffect(() => {
     return () => {
       if (deleteTimeoutRef.current) {
         window.clearTimeout(deleteTimeoutRef.current);
       }
       if (statusToastTimeoutRef.current) {
         window.clearTimeout(statusToastTimeoutRef.current);
+      }
+      if (themeSyncTimeoutRef.current) {
+        window.clearTimeout(themeSyncTimeoutRef.current);
       }
     };
   }, []);
@@ -260,6 +449,23 @@ function App() {
       window.cancelAnimationFrame(animationFrameId);
     };
   }, [isTaskSheetOpen]);
+
+  useEffect(() => {
+    if (!isThemePanelOpen) {
+      return;
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setThemePanelOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isThemePanelOpen]);
 
   function clearFeedback() {
     setStatusToast(null);
@@ -333,6 +539,12 @@ function App() {
     setToken("");
     setUser(null);
     setTasks([]);
+    setThemePanelOpen(false);
+    themeSyncEnabledRef.current = false;
+    if (themeSyncTimeoutRef.current) {
+      window.clearTimeout(themeSyncTimeoutRef.current);
+      themeSyncTimeoutRef.current = null;
+    }
     localStorage.removeItem("app-tasks-token");
     localStorage.removeItem("app-tasks-user");
   }
@@ -411,6 +623,40 @@ function App() {
     setSearchQuery(normalizeEdgeWhitespace(event.target.value));
   }
 
+  function updateThemeConfig(nextTheme, options = {}) {
+    const { sync = true } = options;
+    const normalizedTheme = normalizeTheme(nextTheme);
+    themeSyncEnabledRef.current = sync;
+    setThemeConfig(normalizedTheme);
+    applyThemeToDocument(normalizedTheme);
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(normalizedTheme));
+  }
+
+  function handleThemeColorChange(event) {
+    updateThemeConfig({
+      ...themeConfig,
+      baseColor: event.target.value,
+    });
+  }
+
+  function handleThemeSaturationChange(event) {
+    updateThemeConfig({
+      ...themeConfig,
+      saturation: Number(event.target.value),
+    });
+  }
+
+  function handleThemeIntensityChange(event) {
+    updateThemeConfig({
+      ...themeConfig,
+      intensity: Number(event.target.value),
+    });
+  }
+
+  function handleResetTheme() {
+    updateThemeConfig(DEFAULT_THEME);
+  }
+
   async function handleRegister(event) {
     event.preventDefault();
     clearFeedback();
@@ -447,6 +693,10 @@ function App() {
       setUser(result.user);
       setTasks([]);
       setAuthForm(emptyAuthForm);
+      if (result.user?.preferences?.theme) {
+        updateThemeConfig(result.user.preferences.theme, { sync: false });
+      }
+      themeSyncEnabledRef.current = true;
       localStorage.setItem("app-tasks-token", result.token);
       localStorage.setItem("app-tasks-user", JSON.stringify(result.user));
     } catch (requestError) {
@@ -695,6 +945,46 @@ function App() {
     setOpenTaskMenuId((current) => (current === taskId ? "" : taskId));
   }
 
+  function formatTasksForNotionChecklist(taskItems) {
+    const dateLabel = new Date().toLocaleString("pt-BR");
+    const lines = [`# Tarefas exportadas (${dateLabel})`, ""];
+
+    taskItems.forEach((task) => {
+      lines.push(`- [${task.completed ? "x" : " "}] ${task.title}`);
+      if (task.description) {
+        lines.push(`  - ${task.description}`);
+      }
+    });
+
+    return `${lines.join("\n")}\n`;
+  }
+
+  async function handleExportTasksForNotion() {
+    setListMenuOpen(false);
+
+    if (tasks.length === 0) {
+      showStatusToast("Nao ha tarefas para exportar.", "error");
+      return;
+    }
+
+    const checklist = formatTasksForNotionChecklist(tasks);
+
+    try {
+      await navigator.clipboard.writeText(checklist);
+      showStatusToast("Checklist copiado. Cole no Notion.");
+      return;
+    } catch {
+      const blob = new Blob([checklist], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "tarefas-notion.md";
+      anchor.click();
+      URL.revokeObjectURL(url);
+      showStatusToast("Arquivo .md baixado para importar no Notion.");
+    }
+  }
+
   if (!user) {
     return (
       <main className="page">
@@ -792,9 +1082,20 @@ function App() {
             <span className="eyebrow">Painel</span>
             <h1>Olá, {user.name}</h1>
           </div>
-          <button className="ghost-button topbar-logout" onClick={handleLogout} type="button">
-            Sair
-          </button>
+          <div className="topbar-right">
+            <button
+              aria-label="Personalizar tema"
+              className="icon-button theme-icon-button"
+              onClick={() => setThemePanelOpen(true)}
+              title="Personalizar tema"
+              type="button"
+            >
+              <PaletteIcon />
+            </button>
+            <button className="ghost-button topbar-logout" onClick={handleLogout} type="button">
+              Sair
+            </button>
+          </div>
         </header>
         <section className="content-grid">
           <article className="panel task-editor">
@@ -862,7 +1163,29 @@ function App() {
                 <span className="eyebrow">Tarefas</span>
                 <h2>Sua lista</h2>
               </div>
-              {loading ? <span className="soft-badge">Atualizando...</span> : null}
+              <div className="section-header-actions">
+                {loading ? <span className="soft-badge">Atualizando...</span> : null}
+                <div className="list-menu">
+                  <button
+                    aria-label="Opcoes da lista"
+                    aria-expanded={isListMenuOpen}
+                    aria-haspopup="menu"
+                    className="icon-button"
+                    onClick={() => setListMenuOpen((current) => !current)}
+                    title="Opcoes"
+                    type="button"
+                  >
+                    <MoreIcon />
+                  </button>
+                  {isListMenuOpen ? (
+                    <div className="list-menu-popover" role="menu">
+                      <button className="task-menu-item" onClick={handleExportTasksForNotion} role="menuitem" type="button">
+                        Exportar para Notion
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
             <div className="task-list-controls">
               <div className="task-filters">
@@ -1184,6 +1507,57 @@ function App() {
           <button className="text-button toast-action" onClick={handleUndoDelete} type="button">
             Desfazer
           </button>
+        </div>
+      ) : null}
+      {isThemePanelOpen ? (
+        <div className="theme-modal" role="dialog" aria-modal="true" aria-label="Personalizar tema">
+          <button
+            aria-label="Fechar personalizacao de tema"
+            className="theme-modal-backdrop"
+            onClick={() => setThemePanelOpen(false)}
+            type="button"
+          />
+          <section className="panel theme-modal-panel">
+            <div className="theme-panel-header">
+              <h2>Personalizar tema</h2>
+              <div className="theme-modal-actions">
+                <button className="text-button" onClick={handleResetTheme} type="button">
+                  Resetar padrão
+                </button>
+                <button className="ghost-button" onClick={() => setThemePanelOpen(false)} type="button">
+                  Fechar
+                </button>
+              </div>
+            </div>
+            <div className="theme-controls">
+              <label className="field">
+                <span>Cor principal</span>
+                <input type="color" value={themeConfig.baseColor} onChange={handleThemeColorChange} />
+              </label>
+              <label className="field">
+                <span>Saturação ({themeConfig.saturation}%)</span>
+                <input
+                  max="140"
+                  min="40"
+                  onChange={handleThemeSaturationChange}
+                  step="1"
+                  type="range"
+                  value={themeConfig.saturation}
+                />
+              </label>
+              <label className="field">
+                <span>Intensidade ({themeConfig.intensity}%)</span>
+                <input
+                  max="140"
+                  min="40"
+                  onChange={handleThemeIntensityChange}
+                  step="1"
+                  type="range"
+                  value={themeConfig.intensity}
+                />
+              </label>
+            </div>
+          </section>
         </div>
       ) : null}
       {statusToast ? <div className={`status-toast ${statusToast.type}`}>{statusToast.text}</div> : null}

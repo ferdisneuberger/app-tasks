@@ -52,6 +52,24 @@ export async function getProfile(token) {
   });
 }
 
+export async function getUserPreferences(token) {
+  return request("/users/preferences", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function updateUserPreferences(token, payload) {
+  return request("/users/preferences", {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function listTasks(token) {
   return request("/tasks", {
     headers: {
