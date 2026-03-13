@@ -865,6 +865,17 @@ button:focus-visible {
     align-self: flex-start;
   }
 
+  .task-list-panel .section-header {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .task-list-panel .section-header-actions {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
   .icon-button,
   .task-menu-trigger,
   .chip {
